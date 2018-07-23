@@ -28,8 +28,8 @@ asr = new SpeechProASR(config);
         * `.domain_id`: "id"
     * `recorder`: record audio input and encodes to audio file image (Blob object). After the end of the recording, it sends the data to the server for recognition (default = `false`)
     * `bufferLength`: The size of the buffer sent to the server (only WebSockets)
-    * `package`: package name for using recognize (default = `"SpontRus-2"`)
-    * `packageSocket`: package name for using online recognize (WebSockets) (default = `"CommonRespeakingRus-1"`) 
+    * `package`: package name for using recognize (default = `"TelecomRus"`)
+    * `packageSocket`: package name for using online recognize (WebSockets) (default = `"CommonRus"`) 
 
 ### Methods
 ```javascript

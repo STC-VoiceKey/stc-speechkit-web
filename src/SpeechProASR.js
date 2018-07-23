@@ -2,8 +2,8 @@
 
 const asr_default_options = {
   "host": "https://cp.speechpro.com/vkasr/rest/",
-  "package": "SpontRus-2",
-  "packageSocket": "CommonRespeakingRus-1",
+  "package": "TelecomRus",
+  "packageSocket": "CommonRus",
   "bufferSize": 2048,
   "bufferLength": 60000,
   "numChannels": 1,
