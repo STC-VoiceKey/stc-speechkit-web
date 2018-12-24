@@ -9,28 +9,33 @@ const diarization_default_options = {
 
 class SpeechProDiarization {
   constructor(options) {
-    this.options = options || {};
-    this.options.host = options.host || diarization_default_options.host;
+    this.options = {
+      "host": options.host || diarization_default_options.host,
+      "recorder": options.recorder || false
+    };
 
     this.session_id = null;
+    
     let self = this;
 
-    self.createSession(self.options.client).then(function(data) {
+    if (options.client && typeof options.client === 'object') {
+      self.createSession(options.client).then(function(data) {
 
-      if (self.options.recorder) {
-        self.recorder();
-      }
+        if (self.options.recorder) {
+          self.recorder();
+        }
 
-      self.session_id = data.session_id;
-      try {
-        self.complete(self.session_id);
-      } catch (e) {}
+        self.session_id = data.session_id;
+        try {
+          self.complete(self.session_id);
+        } catch (e) {}
 
-    }).catch(function(e) {
-      try {
-        self.error(e);
-      } catch (e) {}
-    });
+      }).catch(function(e) {
+        try {
+          self.error(e);
+        } catch (e) {}
+      });
+    }
   }
 
   ajax(method, url, async, data, headers) {
@@ -158,9 +163,9 @@ class SpeechProDiarization {
     let self = this;
 
     if (self.isRecording()) {
-      console.warn("startRecording: previous recording is running");
+      console.info("startRecording: previous recording is running");
     } else if (!self.options.recorder) {
-      console.warn("startRecording: recorder is not initialized");
+      console.info("startRecording: recorder is not initialized");
     } else {
 
       self.leftchannel = [];
@@ -191,7 +196,7 @@ class SpeechProDiarization {
       delete this.processor;
       this.encodeWav();
     } else {
-      console.warn("finishRecording: no recording is running");
+      console.info("finishRecording: no recording is running");
     }
   }
 
@@ -237,7 +242,7 @@ class SpeechProDiarization {
       return buffer;
     }
     if (rate > this.sampleRate) {
-      console.warn("downsampling rate show be smaller than original sample rate");
+      console.info("downsampling rate show be smaller than original sample rate");
     }
     let sampleRateRatio = this.sampleRate / rate;
     let newLength = Math.round(buffer.length / sampleRateRatio);

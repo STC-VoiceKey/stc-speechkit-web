@@ -11,23 +11,26 @@ const tts_default_options = {
 class SpeechProTTS {
 
   constructor(options) {
-    this.options = options || {};
-    this.options.host = options.host || tts_default_options.host;
-    this.options.voice = options.voice || tts_default_options.voice;
-    this.options.language = options.language || tts_default_options.language;
+    this.options = {
+      "host": options.host || tts_default_options.host,
+      "voice": options.voice || tts_default_options.voice,
+      "language": options.language || tts_default_options.language
+    };
 
     let self = this;
 
-    self.createSession(self.options.client).then(function(data) {
-      self.session_id = data.session_id;
-      try {
-        self.complete(self.session_id);
-      } catch (e) {}
-    }).catch(function(e) {
-      try {
-        self.error(e);
-      } catch (e) {}
-    });
+    if (options.client && typeof options.client === 'object') {
+      self.createSession(options.client).then(function(data) {
+        self.session_id = data.session_id;
+        try {
+          self.complete(self.session_id);
+        } catch (e) {}
+      }).catch(function(e) {
+        try {
+          self.error(e);
+        } catch (e) {}
+      });
+    }
 
   }
 
@@ -96,7 +99,7 @@ class SpeechProTTS {
   }
 
   getVoices(language) {
-    return this.ajax('GET', this.options.host + 'v1/languages/' + language || this.options.language + '/voices', true, null, {
+    return this.ajax('GET', this.options.host + 'v1/languages/' + (language || this.options.language) + '/voices', true, null, {
       "Content-type": "application/json;charset=UTF-8",
       "X-Session-Id": this.session_id
     });
@@ -207,22 +210,31 @@ class SpeechProTTS {
   }
 
   synthesize(text, options) {
-    let self = this;
+    let self = this,
+    voice, play;
+    
+    text = text || '';
+    
+    if (options && typeof options === 'object') {
+      voice = options.voice;
+      play = options.play;
+    } 
 
     self.ajax('POST', self.options.host + 'v1/synthesize', true, {
       "text": {
         "mime": "text/plain",
-        "value": text || ''
+        "value": text
       },
-      "voice_name": options.voice || self.options.voice,
+      "voice_name": voice || self.options.voice,
       "audio": "audio/wav"
     }, {
       "Content-type": "application/json;charset=UTF-8",
       "X-Session-Id": self.session_id
     }).then(function(result) {
+
       let blob = self.b64ToBlob(result.data);
       let blobUrl = URL.createObjectURL(blob);
-      if (options.play) {
+      if (play) {
         let audio = new Audio();
         audio.src = blobUrl;
         audio.play();

@@ -13,31 +13,36 @@ const asr_default_options = {
 
 class SpeechProASR {
   constructor(options) {
-    this.options = options || {};
-    this.options.host = options.host || asr_default_options.host;
-    this.options.package = options.package || asr_default_options.package;
-    this.options.packageSocket = options.packageSocket || asr_default_options.packageSocket;
-    this.options.bufferLength = options.bufferLength || asr_default_options.bufferLength;
+    this.options = {
+      "host": options.host || asr_default_options.host,
+      "package": options.package || asr_default_options.package,
+      "packageSocket": options.packageSocket || asr_default_options.packageSocket,
+      "bufferLength": options.bufferLength || asr_default_options.bufferLength,
+      "recorder": options.recorder || false
+    };
 
     this.session_id = null;
+
     let self = this;
 
-    self.createSession(self.options.client).then(function(data) {
+    if (options.client && typeof options.client === 'object') {
+      self.createSession(options.client).then(function(data) {
 
-      if (self.options.recorder) {
-        self.recorder();
-      }
+        if (self.options.recorder) {
+          self.recorder();
+        }
 
-      self.session_id = data.session_id;
-      try {
-        self.complete(self.session_id);
-      } catch (e) {}
+        self.session_id = data.session_id;
+        try {
+          self.complete(self.session_id);
+        } catch (e) {}
 
-    }).catch(function(e) {
-      try {
-        self.error(e);
-      } catch (e) {}
-    });
+      }).catch(function(e) {
+        try {
+          self.error(e);
+        } catch (e) {}
+      });
+    }
   }
 
   ajax(method, url, async, data, headers) {
@@ -238,14 +243,133 @@ class SpeechProASR {
       });
     });
   }
+  
+  startSocket() {
+
+    
+      let self = this;
+
+      this.createSocket().then(function(socket) {
+        self.socket = socket;
+
+        self.socket.onopen = function() {
+
+          console.log("Socket: connection success");
+
+          let leftchannel = [];
+          let rightchannel = [];
+          let recordingLength = 0;
+
+          self.processor = self.context.createScriptProcessor(self.options.bufferSize, 2, 2);
+
+          self.processor.onaudioprocess = function(e) {
+
+            let left = e.inputBuffer.getChannelData(0);
+            let right = e.inputBuffer.getChannelData(1);
+
+            leftchannel.push(new Float32Array(left));
+            rightchannel.push(new Float32Array(right));
+            recordingLength += self.options.bufferSize;
+
+            self.lastRecording = {
+              "left": leftchannel,
+              "right": rightchannel,
+              "length": recordingLength
+            }
+
+            if (recordingLength > self.options.bufferLength) {
+
+              self.sendSocket(leftchannel, rightchannel, recordingLength);
+              leftchannel = [];
+              rightchannel = [];
+              recordingLength = 0;
+              self.lastRecording = null;
+            }
+          }
+
+          self.volume.connect(self.processor);
+          self.processor.connect(self.context.destination);
+        };
+
+        self.socket.onclose = function(event) {
+          
+          self.recSocket = null;
+
+          if (event.wasClean) {
+            console.log("Socket: connection closed cleanly");
+          } else {
+            console.log("Socket: disconnect");
+          }
+          console.log('Code: ' + event.code + ' reason: ' + event.reason);
+
+        };
+
+        self.socket.onmessage = function(event) {
+          try {
+            self.recognizeSocketComplete(event.data);
+          } catch (e) {}
+        };
+
+        self.socket.onerror = function(error) {
+          
+          self.recSocket = null;
+
+          console.log("Socket: error: " + error.message);
+          
+        };
+
+
+      }).catch(function(e) {
+        
+        self.recSocket = null;
+        
+        console.error("Socket: create socket fail: " + e.responseText);
+        
+      });
+  }
+
+  sendSocket(leftchannel, rightchannel, recordingLength) {
+
+    let self = this;
+
+    let leftBuffer = this.mergeBuffers(leftchannel, recordingLength);
+    let rightBuffer = this.mergeBuffers(rightchannel, recordingLength);
+
+    leftBuffer = this.downSampleBuffer(leftBuffer, this.options.sampleRateSocket);
+    rightBuffer = this.downSampleBuffer(rightBuffer, this.options.sampleRateSocket);
+
+    let interleaved = this.options.numChannels > 1 ? this.interleave(leftBuffer, rightBuffer) : leftBuffer;
+
+    let buffer = new ArrayBuffer(44 + interleaved.length * 2);
+    let view = new DataView(buffer);
+
+    let index = 44;
+
+    for (let i = 0; i < interleaved.length; i++) {
+      view.setInt16(index, interleaved[i] * (0x7FFF * 1), true);
+      index += 2;
+    }
+
+    let req = function() {
+      if (self.packageSocketLoaded) {
+        self.socket.send(new Blob([view], {
+          type: 'audio/L16'
+        }));
+      } else {
+        requestAnimationFrame(req);
+      }
+    }
+
+    requestAnimationFrame(req);
+  }
 
   startRecord() {
     let self = this;
 
     if (self.isRecording()) {
-      console.warn("startRecording: previous recording is running");
+      console.info("startRecording: previous recording is running");
     } else if (!self.options.recorder) {
-      console.warn("startRecording: recorder is not initialized");
+      console.info("startRecording: recorder is not initialized");
     } else {
 
       self.packageLoad(self.options.package).then(function() {
@@ -277,145 +401,71 @@ class SpeechProASR {
 
   stopRecord() {
 
-    if (this.isRecording()) {
+    if (this.isRecording() && !this.recSocket) {
 
       this.volume.disconnect();
       this.processor.disconnect();
       delete this.processor;
       this.encodeWav();
     } else {
-      console.warn("finishRecording: no recording is running");
+      console.info("finishRecording: no recording is running");
     }
-  }
-
-  startSocket() {
-    if (this.isRecording()) {
-      console.warn("startRecording: previous recording is running");
-    } else {
-      let self = this;
-
-      this.createSocket().then(function(socket) {
-        self.socket = socket;
-
-        self.socket.onopen = function() {
-          console.log("Socket: connection success");
-        };
-
-        self.socket.onclose = function(event) {
-          if (event.wasClean) {
-            console.log("Socket: connection closed cleanly");
-          } else {
-            console.log("Socket: disconnect");
-          }
-          console.log('Code: ' + event.code + ' reason: ' + event.reason);
-        };
-
-        self.socket.onmessage = function(event) {
-          try {
-            self.recognizeSocketComplete(event.data);
-          } catch (e) {}
-        };
-
-        self.socket.onerror = function(error) {
-          console.log("Socket: error: " + error.message);
-        };
-
-        let leftchannel = [];
-        let rightchannel = [];
-        let recordingLength = 0;
-
-        self.processor = self.context.createScriptProcessor(self.options.bufferSize, 2, 2);
-
-        self.processor.onaudioprocess = function(e) {
-
-          let left = e.inputBuffer.getChannelData(0);
-          let right = e.inputBuffer.getChannelData(1);
-
-          leftchannel.push(new Float32Array(left));
-          rightchannel.push(new Float32Array(right));
-          recordingLength += self.options.bufferSize;
-
-          self.lastRecording = {
-            "left": leftchannel,
-            "right": rightchannel,
-            "length": recordingLength
-          }
-
-          if (recordingLength > self.options.bufferLength) {
-
-            self.sendSocket(leftchannel, rightchannel, recordingLength);
-            leftchannel = [];
-            rightchannel = [];
-            recordingLength = 0;
-            self.lastRecording = null;
-          }
-        }
-
-        self.volume.connect(self.processor);
-        self.processor.connect(self.context.destination);
-      }).catch(function(e) {
-        console.error("Socket: create socket fail: " + e.responseText);
-      });
-
-    }
-  }
-
-  sendSocket(leftchannel, rightchannel, recordingLength) {
-
-    let leftBuffer = this.mergeBuffers(leftchannel, recordingLength);
-    let rightBuffer = this.mergeBuffers(rightchannel, recordingLength);
-
-    leftBuffer = this.downSampleBuffer(leftBuffer, this.options.sampleRateSocket);
-    rightBuffer = this.downSampleBuffer(rightBuffer, this.options.sampleRateSocket);
-
-    let interleaved = this.options.numChannels > 1 ? this.interleave(leftBuffer, rightBuffer) : leftBuffer;
-
-    let buffer = new ArrayBuffer(44 + interleaved.length * 2);
-    let view = new DataView(buffer);
-
-    let index = 44;
-
-    for (let i = 0; i < interleaved.length; i++) {
-      view.setInt16(index, interleaved[i] * (0x7FFF * 1), true);
-      index += 2;
-    }
-
-    this.socket.send(new Blob([view], {
-      type: 'audio/L16'
-    }));
   }
 
   startRecordSocket() {
     let self = this;
-
-    if (!self.options.recorder) {
-
-      this.recorder().then(function() {
-        self.startSocket();
-      }).catch(function(e) {
-        console.error(e);
-      });
+    
+    if (self.isRecording() || self.recSocket) {
+      console.info("startRecordingSocket: previous recording is running");
     } else {
-      self.startSocket();
+
+      self.recSocket = true;
+
+      self.packageLoad(self.options.packageSocket).then(function() {
+        self.packageSocketLoaded = true;
+      }).catch(function(e) {
+        console.error(e.responseText);
+      });
+
+
+      if (!self.options.recorder) {
+
+        this.recorder().then(function() {
+          self.startSocket();
+        }).catch(function(e) {
+          console.error(e);
+        });
+      } else {
+        self.startSocket();
+      }
     }
   }
 
   stopRecordSocket() {
     let self = this;
-    if (self.isRecording() || !self.options.recorder) {
+
+    if (self.isRecording() && self.recSocket) {
+      
+      self.recSocket = null;
+
       self.sendSocket(self.lastRecording.left, self.lastRecording.right, self.lastRecording.length);
       self.volume.disconnect();
       self.processor.disconnect();
       delete self.processor;
       self.closeSocket().then(function(data) {
         try {
-          self.recognizeSocketCompleteFinal(data); 
+          self.recognizeSocketCompleteFinal(data);
         } catch (e) {}
       }).catch(function() {
         self.socket.close();
+      }).finally(function() {
+        self.packageUnload(self.options.packageSocket).then(function() {
+          self.packageSocketLoaded = null;
+        });
       });
+
     } else {
-      console.warn("finishRecording: no recording is running");
+      console.info("finishRecordingSocket: no recording is running");
     }
   }
 
@@ -460,7 +510,7 @@ class SpeechProASR {
       return buffer;
     }
     if (rate > this.sampleRate) {
-      console.warn("downsampling rate show be smaller than original sample rate");
+      console.info("downsampling rate show be smaller than original sample rate");
     }
     let sampleRateRatio = this.sampleRate / rate;
     let newLength = Math.round(buffer.length / sampleRateRatio);
