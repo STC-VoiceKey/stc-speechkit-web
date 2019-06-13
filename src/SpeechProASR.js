@@ -184,7 +184,7 @@ class SpeechProASR {
     return new Promise(function(resolve, reject) {
       self.getSocket({
         "package_id": self.options.packageSocket,
-        "mime": "audio/L16"
+        "mime": "audio/l16"
       }).then(function(data) {
         let socket = new WebSocket(data.url);
         self.transaction_id = data.url.split("stream/")[1];
@@ -353,7 +353,7 @@ class SpeechProASR {
     let req = function() {
       if (self.packageSocketLoaded) {
         self.socket.send(new Blob([view], {
-          type: 'audio/L16'
+          type: 'audio/l16'
         }));
       } else {
         requestAnimationFrame(req);
