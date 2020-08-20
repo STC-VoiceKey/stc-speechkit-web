@@ -76,7 +76,7 @@ class SpeechProASR {
 
   createSession(data) {
 
-    return this.ajax('POST', this.options.host + 'session', true, data, {
+    return this.ajax('POST', 'https://cp.speechpro.com/vksession/rest/session', true, data, {
       "Content-type": "application/json;charset=UTF-8"
     });
   }
