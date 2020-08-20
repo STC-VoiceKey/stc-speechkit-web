@@ -2,12 +2,12 @@
 
 const asr_default_options = {
   "host": "https://cp.speechpro.com/vkasr/rest/",
-  "package": "TelecomRus",
-  "packageSocket": "CommonRus",
+  "package": "FarField",
+  "packageSocket": "FarField",
   "bufferSize": 2048,
   "bufferLength": 60000,
   "numChannels": 1,
-  "sampleRate": 8000,
+  "sampleRate": 16000,
   "sampleRateSocket": 16000
 }
 
@@ -243,10 +243,10 @@ class SpeechProASR {
       });
     });
   }
-  
+
   startSocket() {
 
-    
+
       let self = this;
 
       this.createSocket().then(function(socket) {
@@ -292,7 +292,7 @@ class SpeechProASR {
         };
 
         self.socket.onclose = function(event) {
-          
+
           self.recSocket = null;
 
           if (event.wasClean) {
@@ -311,20 +311,20 @@ class SpeechProASR {
         };
 
         self.socket.onerror = function(error) {
-          
+
           self.recSocket = null;
 
           console.log("Socket: error: " + error.message);
-          
+
         };
 
 
       }).catch(function(e) {
-        
+
         self.recSocket = null;
-        
+
         console.error("Socket: create socket fail: " + e.responseText);
-        
+
       });
   }
 
@@ -414,7 +414,7 @@ class SpeechProASR {
 
   startRecordSocket() {
     let self = this;
-    
+
     if (self.isRecording() || self.recSocket) {
       console.info("startRecordingSocket: previous recording is running");
     } else {
@@ -445,7 +445,7 @@ class SpeechProASR {
     let self = this;
 
     if (self.isRecording() && self.recSocket) {
-      
+
       self.recSocket = null;
 
       self.sendSocket(self.lastRecording.left, self.lastRecording.right, self.lastRecording.length);
