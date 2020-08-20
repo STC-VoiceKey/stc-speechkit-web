@@ -1,14 +1,14 @@
 # STC speech libraries for web
-Libraries for the use of rest API recognition, synthesis and speech diarization 
+Libraries for the use of rest API recognition, synthesis and speech diarization
 #### ASR
 `rest API` https://cp.speechpro.com/vkasr/rest/ \
-`help` https://cp.speechpro.com/vkasr/help 
+`help` https://cp.speechpro.com/vkasr/help
 #### TTS
 `rest API` https://cp.speechpro.com/vktts/rest/ \
-`help` https://cp.speechpro.com/vktts/help 
+`help` https://cp.speechpro.com/vktts/help
 #### Diarization
 `rest API` https://cp.speechpro.com/vkdiarization/rest/ \
-`help` https://cp.speechpro.com/vkdiarization/help 
+`help` https://cp.speechpro.com/vkdiarization/help
 
 ## Using library ASR
 Load main script from HTML first.
@@ -21,15 +21,14 @@ Load main script from HTML first.
 asr = new SpeechProASR(config);
 ```
 * config (Parameters with default values are not required)
-    * `host`: url rest API (default = `"https://cp.speechpro.com/vkasr/rest/"`) 
     * `client`: user data for authorization
         * `.username`: "username"
         * `.password`: "password"
         * `.domain_id`: "id"
     * `recorder`: record audio input and encodes to audio file image (Blob object). After the end of the recording, it sends the data to the server for recognition (default = `false`)
     * `bufferLength`: The size of the buffer sent to the server (only WebSockets)
-    * `package`: package name for using recognize (default = `"TelecomRus"`)
-    * `packageSocket`: package name for using online recognize (WebSockets) (default = `"CommonRus"`) 
+    * `package`: package name for using recognize (default = `"FarField"`)
+    * `packageSocket`: package name for using online recognize (WebSockets) (default = `"FarField"`)
 
 ### Methods
 ```javascript
@@ -40,7 +39,7 @@ Get all available packages
 * Parameters
     * (none)
 * Returns (Promise `then` or `catch`)
-    * `Array`: array of objects with data about available packages 
+    * `Array`: array of objects with data about available packages
 ```javascript
 asr.setPackage(packageId);
 ```
@@ -59,17 +58,17 @@ Set package for WebSockets after initialization
     * `.packageId`: package identifier (type: 'String')
 * Returns
     * (none)
-    
+
 ```javascript
 asr.recognizeFile(file);
 ```
 Recognize from wav file
 * Note
-  * **_The file must have a sampling frequency of 8000_**
+  * **_The file must have a sampling frequency of 16000_**
 * Parameters
     * `.file`: blob object (type: 'audio/wav')
 * Returns
-    * (none) 
+    * (none)
 
 ```javascript
 asr.startRecord();
@@ -110,7 +109,7 @@ Stop recording and close WebSockets
 `recognizeComplete` - Recognition result \
 `recognizeSocketComplete` - Recognition result web sockets \
 `recognizeSocketCompleteFinal` - The final result of recognition web sockets (Returns the result after the socket is closed)\
-`recognizeError` - Recognition error 
+`recognizeError` - Recognition error
 
 ### Examples
 ```javascript
@@ -127,7 +126,7 @@ asr.complete = function(){
   //  asr object initialized, here you can use the available methods
 
   //  Events
-  
+
   asr.recognizeComplete = function(result){
     //  result = {
     //    "score": recognize score,
@@ -141,9 +140,9 @@ asr.complete = function(){
 
   asr.recognizeSocketComplete = function(result){
     //  result = recognized text
-    
+
   }
-  
+
   asr.recognizeSocketCompleteFinal = function(result){
     //  result = {
     //    "score": recognize score,
@@ -164,7 +163,6 @@ Load main script from HTML first.
 tts = new SpeechProTTS(config);
 ```
 * config (Parameters with default values are not required)
-    * `host`: url rest API (default = `"https://cp.speechpro.com/vktts/rest/"`) 
     * `client`: user data for authorization
         * `.username`: "username"
         * `.password`: "password"
@@ -174,7 +172,7 @@ tts = new SpeechProTTS(config);
 ```javascript
 tts.getLanguages();
 ```
-Get all available languages 
+Get all available languages
 
 * Parameters
     * (none)
@@ -183,12 +181,12 @@ Get all available languages
 ```javascript
 tts.getVoices(language);
 ```
-Get all available voices 
+Get all available voices
 
 * Parameters
     * `language`: 'language name' (default = 'Russian')
 * Returns (Promise `then` or `catch`)
-    * `Array`: array of objects with data about available voices  
+    * `Array`: array of objects with data about available voices
 ```javascript
 tts.setLanguage(language);
 ```
@@ -214,7 +212,7 @@ Text synthesis
 
 * Parameters
     * `text`: "your text"
-    * `options`: 
+    * `options`:
         * `.voice`: "voice_name" (default = 'Alexander')
         * `.play`: Synthesized text playing (default = 'false')
 * Returns
@@ -226,7 +224,7 @@ Text synthesis for WebSockets
 
 * Parameters
     * `text`: "your text"
-    * `options`: 
+    * `options`:
         * `.voice`: "voice_name" (default = 'Alexander')
         * `.play`: Synthesized text playing after socket closed (default = 'false')
 * Returns
@@ -259,8 +257,8 @@ let tts = new SpeechProTTS({
 
 tts.complete = function() {
   //  tts object initialized, here you can use the available methods
-  
-  // Events 
+
+  // Events
   tts.synthesizeComplete = function(result) {
     //  result = {
     //    "b64Data": base64 data,
@@ -296,7 +294,6 @@ Load main script from HTML first.
 diariz = new SpeechProDiarization(config);
 ```
 * config (Parameters with default values are not required)
-    * `host`: url rest API (default = `"https://cp.speechpro.com/vkasr/rest/"`) 
     * `client`: user data for authorization
         * `.username`: "username"
         * `.password`: "password"
@@ -304,7 +301,7 @@ diariz = new SpeechProDiarization(config);
     * `recorder`: record audio input and encodes to audio file image (Blob object). After the end of the recording, it sends the data to the server for diarization (default = `false`)
 
 ### Methods
-   
+
 ```javascript
 diariz.diarization(file);
 ```
@@ -313,7 +310,7 @@ Diarization from wav file
 * Parameters
     * `.file`: blob object (type: 'audio/wav')
 * Returns
-    * (none) 
+    * (none)
 
 ```javascript
 diariz.startRecord();
@@ -373,4 +370,3 @@ diariz.complete = function(){
   }
 }
 ```
-
