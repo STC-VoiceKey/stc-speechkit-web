@@ -118,13 +118,6 @@ class SpeechProASR {
     });
   }
 
-  packageUnload(packageId) {
-    return this.ajax('GET', this.options.host + 'v1/packages/' + packageId + '/unload', true, null, {
-      "Content-type": "application/json;charset=UTF-8",
-      "X-Session-Id": this.session_id
-    });
-  }
-
   recognizeFile(file) {
     let self = this;
     self.packageLoad(self.options.package).then(function() {
@@ -157,9 +150,7 @@ class SpeechProASR {
           self.recognizeError(e);
         } catch (e) {}
       }).finally(function() {
-        self.packageUnload(self.options.package).then(function() {
-          self.packageLoaded = null;
-        });
+        self.packageLoaded = null;
       });
     }
   }
@@ -459,9 +450,7 @@ class SpeechProASR {
       }).catch(function() {
         self.socket.close();
       }).finally(function() {
-        self.packageUnload(self.options.packageSocket).then(function() {
-          self.packageSocketLoaded = null;
-        });
+        self.packageSocketLoaded = null;
       });
 
     } else {
